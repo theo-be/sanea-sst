@@ -1,27 +1,27 @@
+
+using System;
 using TMPro;
-using Unity.XR.CoreUtils;
 using UnityEngine;
-using UnityEngine.XR.OpenXR.Features.Interactions;
+
+
 
 public class Massage : MonoBehaviour
 {
     
     public GameObject mainGauche;
     public GameObject mainDroite;
-
+    public GameObject corps;
+    
     public EtatMassage etatMassage = EtatMassage.HorsMassage;
 
     // tolerance d'ecart par rapport a la cible
     public GameObject zoneDeTolerance;
     public float toleranceDeRotation = 20f;
     
-    private float intervalleMinPulsation = .4f;
-    private float intervalleMaxPulsation = .7f;
 
-    private float impulsionMin;
-    private float impultionMax;
 
     // ecart entre les deux : 0.05y
+    public float distanceImpulsion = 0.04f; 
     public GameObject debutImpulsion;
     public GameObject finImpulsion;
 
@@ -32,16 +32,33 @@ public class Massage : MonoBehaviour
     public GameObject ecranDebug;
     private  TMP_Text texteDebug;
     private const string mainsenPosition = "mains en position";
-    private const string mainsPasenPosition = "mains pas en position";
+    private const string mainsPasEnPosition = "mains pas en position";
 
+    public float tempsDePreparation = 5f;
     private float tempsAvantDebutMassage = 0f;
 
-    private bool hautTouche = true;
+    private bool hautTouche = false;
     private bool basTouche = false;
 
     private int nombreImpulsion = 0;
-
     public int nombreImpulsionsParSerie = 20;
+
+    private bool impulsionEnCours = false;
+    private bool etatImpulsion = ALLER;
+
+    private const bool ALLER = false;
+    private const bool RETOUR = true;
+    
+    // temps par impulsion lors du massage
+    private float intervalleMinPulsation = .4f;
+    private float intervalleMaxPulsation = .7f;
+    private float tempsDebutImpulsion;
+    
+    
+    private float tempsImpulsionMin;
+    private float tempsImpulsionMax;
+    
+    
     
 
     public void changerEtat(EtatMassage etat)
@@ -127,14 +144,14 @@ public class Massage : MonoBehaviour
                 
                 
                 debutImpulsion.transform.position = mainGauche.transform.position;
-                finImpulsion.transform.position = debutImpulsion.transform.position + Vector3.down * 0.05f;
+                finImpulsion.transform.position = debutImpulsion.transform.position + Vector3.down * distanceImpulsion;
                 
 
-                zoneDeTolerance.SetActive(false);
-                _changeMaterial.SetOtherMaterial();
+                zoneDeTolerance?.SetActive(false);
+                _changeMaterial?.SetOtherMaterial();
                 texteDebug.text = mainsenPosition;
 
-                if (Time.time - tempsAvantDebutMassage > 1f)
+                if (Time.time - tempsAvantDebutMassage > tempsDePreparation)
                 {
                     etatMassage = EtatMassage.EnCours;
                     texteDebug.text = "Massage en cours";
@@ -143,48 +160,79 @@ public class Massage : MonoBehaviour
             }
             else
             {
-                zoneDeTolerance.SetActive(true);
-                _changeMaterial.SetOriginalMaterial();
+                zoneDeTolerance?.SetActive(true);
+                _changeMaterial?.SetOriginalMaterial();
                 tempsAvantDebutMassage = 0f;
-                texteDebug.text = mainsPasenPosition;
+                texteDebug.text = mainsPasEnPosition;
             }
-        } else if (etatMassage == EtatMassage.EnCours)
+        } 
+        else if (etatMassage == EtatMassage.EnCours)
         {
-            // detecter une impulsion
 
             Vector3 positionDebutImpulsion = debutImpulsion.transform.position;
             Vector3 positionFinImpulsion = finImpulsion.transform.position;
 
             if (MainDansLaZone(mainGauche, debutImpulsion) && MainDansLaZone(mainDroite, debutImpulsion) || true)
             {
+                // variables d'etat instantane
+                hautTouche = mainGauche.transform.position.y > positionDebutImpulsion.y;
+                basTouche = mainGauche.transform.position.y < positionFinImpulsion.y;
+
+
                 if (hautTouche)
                 {
-                    if (mainGauche.transform.position.y < positionFinImpulsion.y)
+                    if (etatImpulsion == RETOUR && impulsionEnCours)
                     {
-                        hautTouche = false;
-                        basTouche = true;
+                        float tempsImpulsion = Time.time - tempsDebutImpulsion;
+                        nombreImpulsion++;
+                        texteDebug.text = "Nombre impulsions : " + nombreImpulsion;
+                        
+                        if (tempsImpulsion > intervalleMinPulsation)
+                        {
+                            texteDebug.text += "\nTrop lent : ";
+                        } else if (tempsImpulsion < intervalleMaxPulsation)
+                        {
+                            texteDebug.text += "\nTrop rapide : ";
+                        }
+                        texteDebug.text += tempsImpulsion + "s";
                     }
+                    impulsionEnCours = false;
+                    etatImpulsion = ALLER;
+                    
                 }
+                else if (basTouche)
+                {
+                    etatImpulsion = RETOUR;
+                    
+                }
+                // entre les deux plans
                 else
                 {
-                    if (mainGauche.transform.position.y > positionDebutImpulsion.y)
+                    if (impulsionEnCours == false)
                     {
-                        hautTouche = true;
-                        basTouche = false;
-                        nombreImpulsion++;
-                        texteDebug.text = "Nombre d'impulsions : " + nombreImpulsion;
+                        tempsDebutImpulsion = Time.time;
                     }
+                    impulsionEnCours = true;
+                    
+                    texteDebug.text = "";
+                    texteDebug.text += "\n" + (Time.time - tempsDebutImpulsion) + "s";
                 }
+
             }
-            
+            else
+            {
+                impulsionEnCours = false;
+                etatImpulsion = ALLER;
+            }
+
+            if (nombreImpulsion >= nombreImpulsionsParSerie + 1000000000)
+            {
+                etatMassage = EtatMassage.HorsMassage;
+                texteDebug.text = "Exercice termine";
+            }
+
+
         }
-
-
-
-
-
-        //Console.WriteLine("position main gauche : " + mainGauche.transform.position.ToString());
-        //Debug.Log(mainGauche.transform);
 
     }
     
