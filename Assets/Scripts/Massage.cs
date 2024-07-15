@@ -183,20 +183,9 @@ public class Massage : MonoBehaviour
                 {
                     if (etatImpulsion == RETOUR && impulsionEnCours)
                     {
-                        float tempsImpulsion = Time.time - tempsDebutImpulsion;
                         nombreImpulsion++;
-                        texteDebug.text = "Nombre impulsions : " + nombreImpulsion;
-                        
-                        if (tempsImpulsion > intervalleMinPulsation)
-                        {
-                            texteDebug.text += "\nTrop lent : ";
-                        } else if (tempsImpulsion < intervalleMaxPulsation)
-                        {
-                            texteDebug.text += "\nTrop rapide : ";
-                        }
-                        texteDebug.text += tempsImpulsion + "s";
+                        impulsionEnCours = false;
                     }
-                    impulsionEnCours = false;
                     etatImpulsion = ALLER;
                     
                 }
@@ -210,12 +199,24 @@ public class Massage : MonoBehaviour
                 {
                     if (impulsionEnCours == false)
                     {
+                        float tempsImpulsion = Time.time - tempsDebutImpulsion;
+                        texteDebug.text = "Nombre impulsions : " + nombreImpulsion;
+                        
+                        if (tempsImpulsion > intervalleMinPulsation)
+                        {
+                            texteDebug.text += "\nTrop lent : ";
+                        } else if (tempsImpulsion < intervalleMaxPulsation)
+                        {
+                            texteDebug.text += "\nTrop rapide : ";
+                        }
+                        texteDebug.text += tempsImpulsion + "s";
+                        
                         tempsDebutImpulsion = Time.time;
                     }
                     impulsionEnCours = true;
                     
-                    texteDebug.text = "";
-                    texteDebug.text += "\n" + (Time.time - tempsDebutImpulsion) + "s";
+                    // texteDebug.text = "";
+                    // texteDebug.text += "\n" + (Time.time - tempsDebutImpulsion) + "s";
                 }
 
             }
