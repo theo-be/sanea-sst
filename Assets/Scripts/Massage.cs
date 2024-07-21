@@ -10,7 +10,7 @@ public class Massage : MonoBehaviour
     
     public GameObject mainGauche;
     public GameObject mainDroite;
-    public GameObject corps;
+    private GameObject corps;
     
     public EtatMassage etatMassage = EtatMassage.HorsMassage;
 
@@ -20,13 +20,14 @@ public class Massage : MonoBehaviour
     
 
 
-    // ecart entre les deux : 0.05y
+    // ecart entre les deux : 0.04y
     public float distanceImpulsion = 0.04f; 
     public GameObject debutImpulsion;
     public GameObject finImpulsion;
 
     private ChangeMaterial _changeMaterial;
 
+    public GameObject ecranExerciceTermine;
     
     // ecran debug
     public GameObject ecranDebug;
@@ -41,13 +42,13 @@ public class Massage : MonoBehaviour
     private bool basTouche = false;
 
     private int nombreImpulsion = 0;
-    public int nombreImpulsionsParSerie = 20;
-
-    private bool impulsionEnCours = false;
-    private bool etatImpulsion = ALLER;
+    public int nombreImpulsionsParSerie = 30;
 
     private const bool ALLER = false;
     private const bool RETOUR = true;
+    private bool impulsionEnCours = false;
+    private bool etatImpulsion = ALLER;
+
     
     // temps par impulsion lors du massage
     private float intervalleMinPulsation = .4f;
@@ -64,6 +65,12 @@ public class Massage : MonoBehaviour
     public void changerEtat(EtatMassage etat)
     {
         etatMassage = etat;
+    }
+
+    public void ResetMassage()
+    {
+        etatMassage = EtatMassage.Preparation;
+        nombreImpulsion = 0;
     }
     
     private bool MainsEnPosition()
@@ -122,6 +129,7 @@ public class Massage : MonoBehaviour
     {
         _changeMaterial = zoneDeTolerance.GetComponent<ChangeMaterial>();
         texteDebug = ecranDebug.GetComponent<TMP_Text>();
+        corps = gameObject;
     }
     
     // Update is called once per frame
@@ -154,6 +162,7 @@ public class Massage : MonoBehaviour
                 if (Time.time - tempsAvantDebutMassage > tempsDePreparation)
                 {
                     etatMassage = EtatMassage.EnCours;
+                    tempsDebutImpulsion = Time.time;
                     texteDebug.text = "Massage en cours";
                 }
 
@@ -201,15 +210,19 @@ public class Massage : MonoBehaviour
                     {
                         float tempsImpulsion = Time.time - tempsDebutImpulsion;
                         texteDebug.text = "Nombre impulsions : " + nombreImpulsion;
-                        
-                        if (tempsImpulsion > intervalleMinPulsation)
-                        {
-                            texteDebug.text += "\nTrop lent : ";
-                        } else if (tempsImpulsion < intervalleMaxPulsation)
-                        {
-                            texteDebug.text += "\nTrop rapide : ";
+
+                        if (nombreImpulsion > 1) {
+                            if (tempsImpulsion > intervalleMaxPulsation)
+                            {
+                                texteDebug.text += "\n\nTrop lent";
+                            }
+                            else if (tempsImpulsion < intervalleMinPulsation)
+                            {
+                                texteDebug.text += "\n\nTrop rapide";
+                            }
+
+                            // texteDebug.text += tempsImpulsion + "s";
                         }
-                        texteDebug.text += tempsImpulsion + "s";
                         
                         tempsDebutImpulsion = Time.time;
                     }
@@ -226,9 +239,11 @@ public class Massage : MonoBehaviour
                 etatImpulsion = ALLER;
             }
 
-            if (nombreImpulsion >= nombreImpulsionsParSerie + 1000000000)
+            if (nombreImpulsion >= nombreImpulsionsParSerie)
             {
+                
                 etatMassage = EtatMassage.HorsMassage;
+                ecranExerciceTermine?.SetActive(true);
                 texteDebug.text = "Exercice termine";
             }
 
