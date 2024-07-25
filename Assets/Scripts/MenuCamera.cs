@@ -4,15 +4,20 @@ using UnityEngine;
 
 public class MenuCamera : MonoBehaviour
 {
-    // Start is called before the first frame update
+    public GameObject cam;
+    public float distance;
+
+    private GameObject self;
+    
     void Start()
     {
-        
+        self = gameObject;
     }
 
-    // Update is called once per frame
+    
     void Update()
     {
-        
+        // self.transform.eulerAngles = cam.transform.eulerAngles;
+        // self.transform.position = cam.transform.position + cam.transform.position.normalized * distance;
     }
 }
