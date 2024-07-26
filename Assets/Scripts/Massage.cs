@@ -1,5 +1,6 @@
 
 using System;
+using System.Text;
 using TMPro;
 using UnityEngine;
 
@@ -7,20 +8,24 @@ using UnityEngine;
 
 public class Massage : MonoBehaviour
 {
+    private const bool ALLER = false;
+    private const bool RETOUR = true;
     
     public GameObject mainGauche;
     public GameObject mainDroite;
+    public GameObject cam;
     private GameObject corps;
+    public TypeCorps type = TypeCorps.Adulte;
     
     public EtatMassage etatMassage = EtatMassage.HorsMassage;
 
     // tolerance d'ecart par rapport a la cible
     public GameObject zoneDeTolerance;
-    public float toleranceDeRotation = 20f;
-    
+    private float toleranceDeRotation = 20f;
 
+    public GameObject zoneTete;
 
-    // ecart entre les deux : 0.04y
+    // ecart entre les deux : 0.04 y
     public float distanceImpulsion = 0.04f; 
     public GameObject debutImpulsion;
     public GameObject finImpulsion;
@@ -44,8 +49,7 @@ public class Massage : MonoBehaviour
     private int nombreImpulsion = 0;
     public int nombreImpulsionsParSerie = 30;
 
-    private const bool ALLER = false;
-    private const bool RETOUR = true;
+
     private bool impulsionEnCours = false;
     private bool etatImpulsion = ALLER;
 
@@ -59,7 +63,12 @@ public class Massage : MonoBehaviour
     private float tempsImpulsionMin;
     private float tempsImpulsionMax;
     
+    // insufflations
     
+    public int nombreInsufflationsParSerie = 3;
+    private int nombreInsufflations;
+    private EtatInsufflation etatInsufflation = EtatInsufflation.AFaire;
+    private float tempsDebutInsufflation;
     
 
     public void changerEtat(EtatMassage etat)
@@ -69,8 +78,10 @@ public class Massage : MonoBehaviour
 
     public void ResetMassage()
     {
-        etatMassage = EtatMassage.Preparation;
+        etatMassage = EtatMassage.Insufflation;
+        etatInsufflation = EtatInsufflation.AFaire;
         nombreImpulsion = 0;
+        nombreInsufflations = 0;
     }
     
     private bool MainsEnPosition()
@@ -87,26 +98,78 @@ public class Massage : MonoBehaviour
         var rotMainGauche = mainGauche.transform.eulerAngles;
         var rotMainDroite = mainDroite.transform.eulerAngles;
 
-        if (
-            // main gauche
-            Mathf.Abs((posMainGauche - centreSphere).magnitude) < collisionSphere.magnitude / 2f
-            && Mathf.Abs(rotMainGauche.z - 270f) < toleranceDeRotation
-            // main droite
-            &&
-            Mathf.Abs((posMainDroite - centreSphere).magnitude) < collisionSphere.magnitude / 2f
-            && Mathf.Abs(rotMainDroite.z - 90f) < toleranceDeRotation
-            )
+        switch (type)
         {
-            return true;
+            case TypeCorps.Adulte:
+                if (
+                    // main gauche
+                    Mathf.Abs((posMainGauche - centreSphere).magnitude) < collisionSphere.magnitude / 2f
+                    && Mathf.Abs(rotMainGauche.z - 270f) < toleranceDeRotation
+                    // main droite
+                    &&
+                    Mathf.Abs((posMainDroite - centreSphere).magnitude) < collisionSphere.magnitude / 2f
+                    && Mathf.Abs(rotMainDroite.z - 90f) < toleranceDeRotation
+                )
+                {
+                    return true;
+                }
+                break;
+            case TypeCorps.Enfant:
+            case TypeCorps.Bebe:
+                if (
+                    // main gauche
+                    Mathf.Abs((posMainGauche - centreSphere).magnitude) < collisionSphere.magnitude / 2f
+                    && Mathf.Abs(rotMainGauche.z - 270f) < toleranceDeRotation
+                    // main droite
+                    ||
+                    Mathf.Abs((posMainDroite - centreSphere).magnitude) < collisionSphere.magnitude / 2f
+                    && Mathf.Abs(rotMainDroite.z - 90f) < toleranceDeRotation
+                )
+                {
+                    return true;
+                }
+                break;
+            // case TypeCorps.Bebe:
+            //     if (
+            //         // main gauche
+            //         Mathf.Abs((posMainGauche - centreSphere).magnitude) < collisionSphere.magnitude / 2f
+            //         && Mathf.Abs(rotMainGauche.z - 270f) < toleranceDeRotation
+            //         // main droite
+            //         ||
+            //         Mathf.Abs((posMainDroite - centreSphere).magnitude) < collisionSphere.magnitude / 2f
+            //         && Mathf.Abs(rotMainDroite.z - 90f) < toleranceDeRotation
+            //     )
+            //     {
+            //         return true;
+            //     }
+            //     break;
+                
+            
+            default:
+                break;
         }
+            if (
+                // main gauche
+                Mathf.Abs((posMainGauche - centreSphere).magnitude) < collisionSphere.magnitude / 2f
+                && Mathf.Abs(rotMainGauche.z - 270f) < toleranceDeRotation
+                // main droite
+                &&
+                Mathf.Abs((posMainDroite - centreSphere).magnitude) < collisionSphere.magnitude / 2f
+                && Mathf.Abs(rotMainDroite.z - 90f) < toleranceDeRotation
+                )
+            {
+                return true;
+            }
+        
+        
         
         
         return false;
     }
 
-    private bool MainDansLaZone(GameObject main, GameObject zone)
+    private static bool ObjetDansLaZone(GameObject objet, GameObject zone)
     {
-        Vector3 positionMain = main.transform.position;
+        Vector3 positionMain = objet.transform.position;
         Vector3 tailleZone = zone.transform.localScale;
         Vector3 positionZone = zone.transform.position;
 
@@ -135,8 +198,57 @@ public class Massage : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        
-        if (etatMassage == EtatMassage.Preparation)
+
+
+        if (etatMassage == EtatMassage.Insufflation)
+        {
+            
+            texteDebug.text = "etat insufflation : " + etatInsufflation;
+            texteDebug.text += "\nnbi : " + nombreInsufflations + "/" + nombreInsufflationsParSerie;
+            
+            
+            
+            // la camera doit etre au niveau de la tete du corps
+            
+            // mettre la cam 1 s au niveau de la tete du corps
+            // relever la tete pour valider l'insufflation
+
+            // rotation cible de la cam : x = 80
+            Vector3 rotationCamera = cam.transform.eulerAngles;
+
+            if (ObjetDansLaZone(cam, zoneTete) && rotationCamera.x + toleranceDeRotation >= 80f)
+            {
+                if (etatInsufflation == EtatInsufflation.AFaire)
+                {
+                    etatInsufflation = EtatInsufflation.EnCours;
+                    tempsDebutInsufflation = Time.time;
+                } else if (etatInsufflation == EtatInsufflation.EnCours)
+                {
+                    if (Time.time - tempsDebutInsufflation >= 1f)
+                    {
+                        etatInsufflation = EtatInsufflation.Fait;
+                        nombreInsufflations++;
+                    }
+                }
+
+            }
+            else
+            {
+                if (nombreInsufflations >= nombreInsufflationsParSerie)
+                {
+                    etatMassage = EtatMassage.Preparation;
+                }
+                else
+                {
+                    etatInsufflation = EtatInsufflation.AFaire;
+                }
+                tempsDebutImpulsion = Time.time;
+            }
+
+
+
+        }
+        else if (etatMassage == EtatMassage.Preparation)
         {
             if (MainsEnPosition())
             {
@@ -147,7 +259,7 @@ public class Massage : MonoBehaviour
                 }
                 else
                 {
-                    texteDebug.text += "debut de l'exercice dans : " + (Time.time - tempsAvantDebutMassage);
+                    // texteDebug.text += "debut de l'exercice dans : " + (Time.time - tempsAvantDebutMassage);
                 }
                 
                 
@@ -163,7 +275,7 @@ public class Massage : MonoBehaviour
                 {
                     etatMassage = EtatMassage.EnCours;
                     tempsDebutImpulsion = Time.time;
-                    texteDebug.text = "Massage en cours";
+                    // texteDebug.text = "Massage en cours";
                 }
 
             }
@@ -181,7 +293,7 @@ public class Massage : MonoBehaviour
             Vector3 positionDebutImpulsion = debutImpulsion.transform.position;
             Vector3 positionFinImpulsion = finImpulsion.transform.position;
 
-            if (MainDansLaZone(mainGauche, debutImpulsion) && MainDansLaZone(mainDroite, debutImpulsion) || true)
+            if (ObjetDansLaZone(mainGauche, debutImpulsion) && ObjetDansLaZone(mainDroite, debutImpulsion) || true)
             {
                 // variables d'etat instantane
                 hautTouche = mainGauche.transform.position.y > positionDebutImpulsion.y;
@@ -249,7 +361,7 @@ public class Massage : MonoBehaviour
 
 
         }
-
+        
     }
     
 }
@@ -258,5 +370,20 @@ public enum EtatMassage
 {
     HorsMassage,
     Preparation,
-    EnCours
+    EnCours,
+    Insufflation
+}
+
+public enum TypeCorps
+{
+    Adulte,
+    Enfant,
+    Bebe
+}
+
+public enum EtatInsufflation
+{
+    AFaire,
+    EnCours,
+    Fait
 }
