@@ -15,6 +15,7 @@ public class Massage : MonoBehaviour
     public GameObject mainDroite;
     public GameObject cam;
     private GameObject corps;
+    private GameObject mainPrincipale;
     public TypeCorps type = TypeCorps.Adulte;
     
     public EtatMassage etatMassage = EtatMassage.HorsMassage;
@@ -40,7 +41,7 @@ public class Massage : MonoBehaviour
     private const string mainsenPosition = "mains en position";
     private const string mainsPasEnPosition = "mains pas en position";
 
-    public float tempsDePreparation = 5f;
+    public float tempsDePreparation = 3f;
     private float tempsAvantDebutMassage = 0f;
 
     private bool hautTouche = false;
@@ -111,6 +112,7 @@ public class Massage : MonoBehaviour
                     && Mathf.Abs(rotMainDroite.z - 90f) < toleranceDeRotation
                 )
                 {
+                    mainPrincipale = mainGauche;
                     return true;
                 }
                 break;
@@ -119,13 +121,18 @@ public class Massage : MonoBehaviour
                 if (
                     // main gauche
                     Mathf.Abs((posMainGauche - centreSphere).magnitude) < collisionSphere.magnitude / 2f
-                    && Mathf.Abs(rotMainGauche.z - 270f) < toleranceDeRotation
+                    && Mathf.Abs(rotMainGauche.z - 270f) < toleranceDeRotation)
+                {
+                    mainPrincipale = mainGauche;
+                    return true;
+                }
                     // main droite
-                    ||
+                 if (   
                     Mathf.Abs((posMainDroite - centreSphere).magnitude) < collisionSphere.magnitude / 2f
                     && Mathf.Abs(rotMainDroite.z - 90f) < toleranceDeRotation
                 )
                 {
+                    mainPrincipale = mainDroite;
                     return true;
                 }
                 break;
@@ -148,21 +155,63 @@ public class Massage : MonoBehaviour
             default:
                 break;
         }
-            if (
-                // main gauche
-                Mathf.Abs((posMainGauche - centreSphere).magnitude) < collisionSphere.magnitude / 2f
-                && Mathf.Abs(rotMainGauche.z - 270f) < toleranceDeRotation
-                // main droite
-                &&
-                Mathf.Abs((posMainDroite - centreSphere).magnitude) < collisionSphere.magnitude / 2f
-                && Mathf.Abs(rotMainDroite.z - 90f) < toleranceDeRotation
+            // if (
+            //     // main gauche
+            //     Mathf.Abs((posMainGauche - centreSphere).magnitude) < collisionSphere.magnitude / 2f
+            //     && Mathf.Abs(rotMainGauche.z - 270f) < toleranceDeRotation
+            //     // main droite
+            //     &&
+            //     Mathf.Abs((posMainDroite - centreSphere).magnitude) < collisionSphere.magnitude / 2f
+            //     && Mathf.Abs(rotMainDroite.z - 90f) < toleranceDeRotation
+            //     )
+            // {
+            //     return true;
+            // }
+        
+        return false;
+    }
+    
+    private bool MainEnPosition(GameObject main)
+    {
+        // verifier si les mains sont environ dans la zone de tolerance avant le massage
+
+        var posMain = main.transform.position;
+        var collisionSphere = zoneDeTolerance.transform.localScale;
+        var centreSphere = zoneDeTolerance.transform.position;
+
+        // rotation cible : 270 gauche 90 droite axe z
+        
+        var rotMain = main.transform.eulerAngles;
+
+        switch (type)
+        {
+            case TypeCorps.Adulte:
+                if (
+                    // main gauche
+                    Mathf.Abs((posMain - centreSphere).magnitude) < collisionSphere.magnitude / 2f
+                    && Mathf.Abs(rotMain.z - 270f) < toleranceDeRotation
                 )
-            {
-                return true;
-            }
-        
-        
-        
+                {
+                    mainPrincipale = main;
+                    return true;
+                }
+                break;
+            case TypeCorps.Enfant:
+            case TypeCorps.Bebe:
+                if (
+                    // main gauche
+                    Mathf.Abs((posMain - centreSphere).magnitude) < collisionSphere.magnitude / 2f
+                    && Mathf.Abs(rotMain.z - 270f) < toleranceDeRotation)
+                {
+                    mainPrincipale = main;
+                    return true;
+                }
+
+                break;
+            default:
+                break;
+        }
+
         
         return false;
     }
@@ -186,8 +235,6 @@ public class Massage : MonoBehaviour
         return false;
     }
     
-    
-    // Start is called before the first frame update
     void Start()
     {
         _changeMaterial = zoneDeTolerance.GetComponent<ChangeMaterial>();
@@ -195,7 +242,6 @@ public class Massage : MonoBehaviour
         corps = gameObject;
     }
     
-    // Update is called once per frame
     void Update()
     {
 
@@ -204,7 +250,7 @@ public class Massage : MonoBehaviour
         {
             
             texteDebug.text = "etat insufflation : " + etatInsufflation;
-            texteDebug.text += "\nnbi : " + nombreInsufflations + "/" + nombreInsufflationsParSerie;
+            texteDebug.text += "\nnb : " + nombreInsufflations + "/" + nombreInsufflationsParSerie;
             
             
             
@@ -250,41 +296,88 @@ public class Massage : MonoBehaviour
         }
         else if (etatMassage == EtatMassage.Preparation)
         {
-            if (MainsEnPosition())
+            if (type == TypeCorps.Adulte)
             {
-
-                if (tempsAvantDebutMassage == 0f)
+                
+                if (MainEnPosition(mainGauche) && MainEnPosition(mainDroite))
                 {
-                    tempsAvantDebutMassage = Time.time;
+
+                    if (tempsAvantDebutMassage == 0f)
+                    {
+                        tempsAvantDebutMassage = Time.time;
+                    }
+                    else
+                    {
+                        // texteDebug.text += "debut de l'exercice dans : " + (Time.time - tempsAvantDebutMassage);
+                    }
+                    
+                    
+                    debutImpulsion.transform.position = mainPrincipale.transform.position;
+                    finImpulsion.transform.position = debutImpulsion.transform.position + Vector3.down * distanceImpulsion;
+                    
+
+                    zoneDeTolerance?.SetActive(false);
+                    _changeMaterial?.SetOtherMaterial();
+                    texteDebug.text = mainsenPosition;
+
+                    if (Time.time - tempsAvantDebutMassage > tempsDePreparation)
+                    {
+                        etatMassage = EtatMassage.EnCours;
+                        tempsDebutImpulsion = Time.time;
+                        // texteDebug.text = "Massage en cours";
+                    }
+
                 }
                 else
                 {
-                    // texteDebug.text += "debut de l'exercice dans : " + (Time.time - tempsAvantDebutMassage);
+                    zoneDeTolerance?.SetActive(true);
+                    _changeMaterial?.SetOriginalMaterial();
+                    tempsAvantDebutMassage = 0f;
+                    texteDebug.text = mainsPasEnPosition;
                 }
-                
-                
-                debutImpulsion.transform.position = mainGauche.transform.position;
-                finImpulsion.transform.position = debutImpulsion.transform.position + Vector3.down * distanceImpulsion;
-                
-
-                zoneDeTolerance?.SetActive(false);
-                _changeMaterial?.SetOtherMaterial();
-                texteDebug.text = mainsenPosition;
-
-                if (Time.time - tempsAvantDebutMassage > tempsDePreparation)
-                {
-                    etatMassage = EtatMassage.EnCours;
-                    tempsDebutImpulsion = Time.time;
-                    // texteDebug.text = "Massage en cours";
-                }
-
-            }
-            else
+            } else
             {
-                zoneDeTolerance?.SetActive(true);
-                _changeMaterial?.SetOriginalMaterial();
-                tempsAvantDebutMassage = 0f;
-                texteDebug.text = mainsPasEnPosition;
+                
+                // verifier qu'il n'y a qu'une main pour faire le massage sur le corps enfant ou bebe
+                bool mainG = MainEnPosition(mainGauche);
+                bool mainD = MainEnPosition(mainDroite);
+                if (!(mainD && mainG) && mainG || mainD)
+                {
+
+                    if (tempsAvantDebutMassage == 0f)
+                    {
+                        tempsAvantDebutMassage = Time.time;
+                    }
+                    else
+                    {
+                        // texteDebug.text += "debut de l'exercice dans : " + (Time.time - tempsAvantDebutMassage);
+                    }
+                    
+                    
+                    debutImpulsion.transform.position = mainPrincipale.transform.position;
+                    finImpulsion.transform.position = debutImpulsion.transform.position + Vector3.down * distanceImpulsion;
+                    
+
+                    zoneDeTolerance?.SetActive(false);
+                    _changeMaterial?.SetOtherMaterial();
+                    texteDebug.text = mainsenPosition;
+
+                    if (Time.time - tempsAvantDebutMassage > tempsDePreparation)
+                    {
+                        etatMassage = EtatMassage.EnCours;
+                        tempsDebutImpulsion = Time.time;
+                        // texteDebug.text = "Massage en cours";
+                    }
+
+                }
+                else
+                {
+                    zoneDeTolerance?.SetActive(true);
+                    _changeMaterial?.SetOriginalMaterial();
+                    tempsAvantDebutMassage = 0f;
+                    texteDebug.text = mainsPasEnPosition;
+                    texteDebug.text += "Une seule main doit être utilisée pour le massage";
+                }
             }
         } 
         else if (etatMassage == EtatMassage.EnCours)
@@ -293,11 +386,13 @@ public class Massage : MonoBehaviour
             Vector3 positionDebutImpulsion = debutImpulsion.transform.position;
             Vector3 positionFinImpulsion = finImpulsion.transform.position;
 
-            if (ObjetDansLaZone(mainGauche, debutImpulsion) && ObjetDansLaZone(mainDroite, debutImpulsion) || true)
+            // verifie que les mains soient toujours sur le corps pendant le massage
+            if (true || ObjetDansLaZone(mainPrincipale, debutImpulsion))
             {
+                
                 // variables d'etat instantane
-                hautTouche = mainGauche.transform.position.y > positionDebutImpulsion.y;
-                basTouche = mainGauche.transform.position.y < positionFinImpulsion.y;
+                hautTouche = mainPrincipale.transform.position.y > positionDebutImpulsion.y;
+                basTouche = mainPrincipale.transform.position.y < positionFinImpulsion.y;
 
 
                 if (hautTouche)
