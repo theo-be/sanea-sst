@@ -3,7 +3,7 @@ using System;
 using System.Text;
 using TMPro;
 using UnityEngine;
-
+using UnityEngine.XR.Interaction.Toolkit;
 
 
 public class Massage : MonoBehaviour
@@ -71,6 +71,9 @@ public class Massage : MonoBehaviour
     private EtatInsufflation etatInsufflation = EtatInsufflation.AFaire;
     private float tempsDebutInsufflation;
     
+    // deplacement du corps
+    private XRGrabInteractable XRComponent;
+    
 
     public void changerEtat(EtatMassage etat)
     {
@@ -83,6 +86,18 @@ public class Massage : MonoBehaviour
         etatInsufflation = EtatInsufflation.AFaire;
         nombreImpulsion = 0;
         nombreInsufflations = 0;
+    }
+
+    public void ActiverDeplacementCorps()
+    {
+        etatMassage = EtatMassage.HorsMassage;
+        XRComponent.enabled = true;
+    }
+    
+    public void DesactiverDeplacementCorps()
+    {
+        etatMassage = EtatMassage.Insufflation;
+        XRComponent.enabled = false;
     }
     
     private bool MainsEnPosition()
@@ -240,6 +255,8 @@ public class Massage : MonoBehaviour
         _changeMaterial = zoneDeTolerance.GetComponent<ChangeMaterial>();
         texteDebug = ecranDebug.GetComponent<TMP_Text>();
         corps = gameObject;
+        XRComponent = gameObject.GetComponentInParent<XRGrabInteractable>();
+        XRComponent.enabled = false;
     }
     
     void Update()
