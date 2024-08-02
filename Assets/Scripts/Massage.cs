@@ -33,13 +33,6 @@ public class Massage : MonoBehaviour
 
     private ChangeMaterial _changeMaterial;
 
-    public GameObject ecranExerciceTermine;
-    
-    // ecran debug
-    public GameObject ecranDebug;
-    private  TMP_Text texteDebug;
-    private const string mainsenPosition = "mains en position";
-    private const string mainsPasEnPosition = "mains pas en position";
 
     public float tempsDePreparation = 3f;
     private float tempsAvantDebutMassage = 0f;
@@ -47,7 +40,7 @@ public class Massage : MonoBehaviour
     private bool hautTouche = false;
     private bool basTouche = false;
 
-    private int nombreImpulsion = 0;
+    private int nombreImpulsions = 0;
     public int nombreImpulsionsParSerie = 30;
 
 
@@ -74,6 +67,21 @@ public class Massage : MonoBehaviour
     // deplacement du corps
     private XRGrabInteractable XRComponent;
     
+    
+    // ecran exercice termine
+    public GameObject ecranExerciceTermine;
+    
+    
+    // ecran consignes
+    public GameObject ecranConsignes;
+    private ConsignesMassage _consignesMassage;
+    
+    // ecran debug
+    public GameObject ecranDebug;
+    private  TMP_Text texteDebug;
+    private const string mainsenPosition = "mains en position";
+    private const string mainsPasEnPosition = "mains pas en position";
+    
 
     public void changerEtat(EtatMassage etat)
     {
@@ -84,7 +92,7 @@ public class Massage : MonoBehaviour
     {
         etatMassage = EtatMassage.Insufflation;
         etatInsufflation = EtatInsufflation.AFaire;
-        nombreImpulsion = 0;
+        nombreImpulsions = 0;
         nombreInsufflations = 0;
     }
 
@@ -197,36 +205,15 @@ public class Massage : MonoBehaviour
         // rotation cible : 270 gauche 90 droite axe z
         
         var rotMain = main.transform.eulerAngles;
-
-        switch (type)
+        
+        if (
+            Mathf.Abs((posMain - centreSphere).magnitude) < collisionSphere.magnitude / 2f
+            && (Mathf.Abs(rotMain.z - 270f) < toleranceDeRotation || Mathf.Abs(rotMain.z - 90f) < toleranceDeRotation)
+        )
         {
-            case TypeCorps.Adulte:
-                if (
-                    // main gauche
-                    Mathf.Abs((posMain - centreSphere).magnitude) < collisionSphere.magnitude / 2f
-                    && Mathf.Abs(rotMain.z - 270f) < toleranceDeRotation
-                )
-                {
-                    mainPrincipale = main;
-                    return true;
-                }
-                break;
-            case TypeCorps.Enfant:
-            case TypeCorps.Bebe:
-                if (
-                    // main gauche
-                    Mathf.Abs((posMain - centreSphere).magnitude) < collisionSphere.magnitude / 2f
-                    && Mathf.Abs(rotMain.z - 270f) < toleranceDeRotation)
-                {
-                    mainPrincipale = main;
-                    return true;
-                }
-
-                break;
-            default:
-                break;
+            mainPrincipale = main;
+            return true;
         }
-
         
         return false;
     }
@@ -257,6 +244,11 @@ public class Massage : MonoBehaviour
         corps = gameObject;
         XRComponent = gameObject.GetComponentInParent<XRGrabInteractable>();
         XRComponent.enabled = false;
+        
+        _consignesMassage = ecranConsignes.GetComponent<ConsignesMassage>();
+        _consignesMassage.typeCorps = type;
+        _consignesMassage.nombreMaxInsufflations = nombreInsufflationsParSerie;
+        _consignesMassage.nombreMaxImpulsions = nombreImpulsionsParSerie;
     }
     
     void Update()
@@ -268,7 +260,9 @@ public class Massage : MonoBehaviour
             
             texteDebug.text = "etat insufflation : " + etatInsufflation;
             texteDebug.text += "\nnb : " + nombreInsufflations + "/" + nombreInsufflationsParSerie;
-            
+
+            _consignesMassage.etatMassage = EtatMassage.Insufflation;
+            _consignesMassage.nombreInsufflations = nombreInsufflations;
             
             
             // la camera doit etre au niveau de la tete du corps
@@ -313,6 +307,8 @@ public class Massage : MonoBehaviour
         }
         else if (etatMassage == EtatMassage.Preparation)
         {
+            _consignesMassage.etatMassage = EtatMassage.Preparation;
+            
             if (type == TypeCorps.Adulte)
             {
                 
@@ -400,6 +396,8 @@ public class Massage : MonoBehaviour
         else if (etatMassage == EtatMassage.EnCours)
         {
 
+            _consignesMassage.etatMassage = EtatMassage.EnCours;
+
             Vector3 positionDebutImpulsion = debutImpulsion.transform.position;
             Vector3 positionFinImpulsion = finImpulsion.transform.position;
 
@@ -416,7 +414,8 @@ public class Massage : MonoBehaviour
                 {
                     if (etatImpulsion == RETOUR && impulsionEnCours)
                     {
-                        nombreImpulsion++;
+                        nombreImpulsions++;
+                        _consignesMassage.nombreImpulsions = nombreImpulsions;
                         impulsionEnCours = false;
                     }
                     etatImpulsion = ALLER;
@@ -433,9 +432,9 @@ public class Massage : MonoBehaviour
                     if (impulsionEnCours == false)
                     {
                         float tempsImpulsion = Time.time - tempsDebutImpulsion;
-                        texteDebug.text = "Nombre impulsions : " + nombreImpulsion;
+                        texteDebug.text = "Nombre impulsions : " + nombreImpulsions;
 
-                        if (nombreImpulsion > 1) {
+                        if (nombreImpulsions > 1) {
                             if (tempsImpulsion > intervalleMaxPulsation)
                             {
                                 texteDebug.text += "\n\nTrop lent";
@@ -463,12 +462,13 @@ public class Massage : MonoBehaviour
                 etatImpulsion = ALLER;
             }
 
-            if (nombreImpulsion >= nombreImpulsionsParSerie)
+            if (nombreImpulsions >= nombreImpulsionsParSerie)
             {
                 
                 etatMassage = EtatMassage.HorsMassage;
                 ecranExerciceTermine?.SetActive(true);
                 texteDebug.text = "Exercice termine";
+                
             }
 
 
