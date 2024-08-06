@@ -126,4 +126,20 @@ public class GestionQcm : MonoBehaviour
         }
     }
     
+    public void ecran6()
+    {
+        if (corps == TypeCorps.Adulte)
+        {
+            activerEcran6adulte();
+        }
+        else if (corps == TypeCorps.Enfant)
+        {
+            activerEcran6enfant();
+        }
+        else if (corps == TypeCorps.Bebe)
+        {
+            activerEcran6bebe();
+        }
+    }
+    
 }
