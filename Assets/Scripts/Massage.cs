@@ -264,6 +264,7 @@ public class Massage : MonoBehaviour
                 if (nombreInsufflations >= nombreInsufflationsParSerie)
                 {
                     etatMassage = EtatMassage.HorsMassage;
+                    ecranConsignes.SetActive(false);
                     gestion.ecran8();
                     // ecranExerciceTermine?.SetActive(true);
                     // texteDebug.text = "Exercice termine";
@@ -438,6 +439,7 @@ public class Massage : MonoBehaviour
             if (nombreImpulsions >= nombreImpulsionsParSerie)
             {
                 etatMassage = EtatMassage.Insufflation;
+                ecranConsignes.SetActive(false);
                 gestion.activerEcran65();
             }
 
